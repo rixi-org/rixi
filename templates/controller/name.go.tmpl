@@ -1,0 +1,18 @@
+package controller
+
+import (
+	"net/http"
+	"time"
+
+	"{{.Module}}/model"
+	"{{.Module}}/view"
+)
+
+func {{.Name}}Handler(w http.ResponseWriter, r *http.Request) {
+	data := model.{{.Name}}{
+		ID:        1,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	view.Render(w, "{{.Name}}", data)
+}

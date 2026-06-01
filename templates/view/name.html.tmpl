@@ -1,0 +1,16 @@
+{{"{{"}}define "{{.Name}}"{{"}}"}}
+<h1>{{.Name}}</h1>
+<table>
+    <thead>
+        <tr>
+            <th>Field</th>
+            <th>Value</th>
+        </tr>
+    </thead>
+    <tbody>
+        <tr><td>ID</td><td>{{"{{"}}.ID{{"}}"}}</td></tr>
+        <tr><td>Created At</td><td>{{"{{"}}.CreatedAt{{"}}"}}</td></tr>
+        <tr><td>Updated At</td><td>{{"{{"}}.UpdatedAt{{"}}"}}</td></tr>
+    </tbody>
+</table>
+{{"{{"}}end{{"}}"}}

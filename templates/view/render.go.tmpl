@@ -1,0 +1,39 @@
+package view
+
+import (
+	"bytes"
+	"html/template"
+	"net/http"
+)
+
+// Page holds the title and pre-rendered HTML content for layout rendering.
+type Page struct {
+	Title   string
+	Content template.HTML
+}
+
+var tmpl *template.Template
+
+func init() {
+	tmpl = template.Must(template.ParseFS(Templates, "base.html", "*.html"))
+}
+
+// Render executes the named content template with data, then wraps it in the
+// base layout.
+func Render(w http.ResponseWriter, name string, data interface{}) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	var buf bytes.Buffer
+	if err := tmpl.ExecuteTemplate(&buf, name, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	err := tmpl.ExecuteTemplate(w, "base", Page{
+		Title:   name,
+		Content: template.HTML(buf.String()),
+	})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+}
