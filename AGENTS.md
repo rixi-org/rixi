@@ -1,7 +1,10 @@
 # rixi - Instruction for Agents
 
-Rixi is going to be the future of golang framework for building web applications.
-It will be an ai native web framework so make your decisions accordingly.
+Rixi is a **CLI tool that generates MVC web applications** for Go. It is not an MVC project itself — it is a framework generator.
+
+The generated projects follow an MVC-lite pattern (model, view, controller) with an embedded web server, HTML templates, and a development server with hot reload.
+
+Rixi is an AI-native web framework. Make your decisions accordingly.
 
 ## Commands
 
@@ -18,16 +21,24 @@ It will be an ai native web framework so make your decisions accordingly.
 
 ## Philosophy
 
-### Zero external dependencies
+### Low external dependencies
 
-This project uses only the Go standard library.
-Do not add external packages — zero supply chain attack surface.
-In case of any dependency is needed like an ORM, search existing mature ORMs and replicate only the features we need.
+Rixi minimizes dependencies but does not require zero.
+- The CLI tool itself should use only the Go standard library.
+- Generated projects may use minimal, well-audited dependencies (e.g., `modernc.org/sqlite` for embedded databases, `go-redis` for caching).
+- Prefer pure Go implementations to avoid CGo and external system libraries.
+- Justify every new dependency. If a standard library solution exists, use it.
 
 ### Single Binary
 
-The eventual artifact is going to be a single binary.
-Any files like html templates, static files, etc. are going to be compiled into the binary.
+The generated project's artifact is a single binary.
+HTML templates, static files, etc. are compiled into the binary via `go:embed`.
+
+### Provider pattern for extensibility
+
+Core interfaces (`Store`, `Cache`) are defined in the rixi package.
+Implementations live in separate driver packages (`driver/sqlite`, `cache/redis`, etc.).
+Users import only what they need — no bloat in the final binary.
 
 ## Misc
 
