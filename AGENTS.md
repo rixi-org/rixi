@@ -40,6 +40,35 @@ Core interfaces (`Store`, `Cache`) are defined in the rixi package.
 Implementations live in separate driver packages (`driver/sqlite`, `cache/redis`, etc.).
 Users import only what they need — no bloat in the final binary.
 
+## Commits
+
+Follow [Conventional Commits](https://www.conventionalcommits.org/) format:
+
+```
+type(scope): subject
+```
+
+**Types:**
+- `feat` — new feature
+- `fix` — bug fix
+- `docs` — documentation only
+- `chore` — maintenance, tooling, dependencies
+- `refactor` — code change that neither fixes a bug nor adds a feature
+- `test` — adding or updating tests
+- `style` — formatting, no code change
+- `perf` — performance improvement
+
+**Scope** is optional but recommended. Examples:
+- `feat(cli): add generate command`
+- `fix(view): handle missing template gracefully`
+- `docs: update AGENTS.md with commit pattern`
+- `chore: update dependencies`
+
+**Rules:**
+- Subject is lowercase, no period, imperative mood ("add" not "added")
+- Keep subject under 72 characters
+- One logical change per commit
+
 ## Misc
 
 - Read README.md to understand the philosophy of the project.
