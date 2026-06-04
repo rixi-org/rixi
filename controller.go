@@ -3,6 +3,10 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/printer"
+	"go/token"
 	"os"
 	"strings"
 	"text/template"
@@ -12,6 +16,7 @@ import (
 type ControllerConfig struct {
 	Name   string
 	Module string
+	Plural string
 }
 
 func generateController(name string) {
@@ -65,12 +70,92 @@ func generateController(name string) {
 	}
 	defer f.Close()
 
-	if err := tmpl.Execute(f, ControllerConfig{Name: ctrlName, Module: module}); err != nil {
+	if err := tmpl.Execute(f, ControllerConfig{Name: ctrlName, Module: module, Plural: strings.ToLower(name) + "s"}); err != nil {
 		fmt.Printf("error: failed to execute template: %v\n", err)
 		os.Exit(1)
 	}
 
 	fmt.Printf("created %s\n", ctrlPath)
+
+	// Add route to routes.go
+	addRoute(name)
+}
+
+// addRoute adds the handler route to routes.go using AST.
+func addRoute(name string) {
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, "routes.go", nil, parser.ParseComments)
+	if err != nil {
+		return
+	}
+
+	routePath := "/" + strings.ToLower(name) + "s/"
+
+	// Skip if route already exists
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "registerRoutes" {
+			continue
+		}
+		for _, stmt := range fn.Body.List {
+			call, ok := stmt.(*ast.ExprStmt)
+			if !ok {
+				continue
+			}
+			callExpr, ok := call.X.(*ast.CallExpr)
+			if !ok {
+				continue
+			}
+			if sel, ok := callExpr.Fun.(*ast.SelectorExpr); ok {
+				if sel.Sel.Name == "HandleFunc" && len(callExpr.Args) >= 1 {
+					if lit, ok := callExpr.Args[0].(*ast.BasicLit); ok {
+						if lit.Value == fmt.Sprintf(`"%s"`, routePath) {
+							return
+						}
+					}
+				}
+			}
+		}
+	}
+
+	// Find registerRoutes function and add route before closing brace
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "registerRoutes" {
+			continue
+		}
+
+		// Build: mux.HandleFunc("/name/s", controller.NameHandler(db))
+		route := &ast.ExprStmt{
+			X: &ast.CallExpr{
+				Fun: &ast.SelectorExpr{
+					X:   &ast.Ident{Name: "mux"},
+					Sel: &ast.Ident{Name: "HandleFunc"},
+				},
+				Args: []ast.Expr{
+					&ast.BasicLit{
+						Kind:  token.STRING,
+						Value: fmt.Sprintf(`"%s"`, routePath),
+					},
+					&ast.CallExpr{
+						Fun: &ast.SelectorExpr{
+							X:   &ast.Ident{Name: "controller"},
+							Sel: &ast.Ident{Name: toPascal(name) + "Handler"},
+						},
+						Args: []ast.Expr{&ast.Ident{Name: "db"}},
+					},
+				},
+			},
+		}
+
+		// Insert at the end (before closing brace)
+		fn.Body.List = append(fn.Body.List[:len(fn.Body.List)-1], route, fn.Body.List[len(fn.Body.List)-1])
+	}
+
+	// Write back
+	var buf strings.Builder
+	printer.Fprint(&buf, fset, file)
+	os.WriteFile("routes.go", []byte(buf.String()), 0644)
 }
 
 // readModuleName extracts the module path from go.mod.

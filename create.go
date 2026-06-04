@@ -16,7 +16,8 @@ import (
 var tmplFS embed.FS
 
 type Project struct {
-	Name string
+	Name   string
+	Module string
 }
 
 func createProject(name string) {
@@ -30,6 +31,8 @@ func createProject(name string) {
 		{"CLAUDE.md", "templates/CLAUDE.md.tmpl"},
 		{"GEMINI.md", "templates/GEMINI.md.tmpl"},
 		{"main.go", "templates/main.go.tmpl"},
+		{"db.go", "templates/db.go.tmpl"},
+		{"cache.go", "templates/cache.go.tmpl"},
 		{"middleware.go", "templates/middleware.go.tmpl"},
 		{"routes.go", "templates/routes.go.tmpl"},
 		{"index.html", "templates/index.html.tmpl"},
@@ -40,7 +43,7 @@ func createProject(name string) {
 	for _, f := range files {
 		t := template.Must(template.ParseFS(tmplFS, f.Tmpl))
 		var buf bytes.Buffer
-		t.Execute(&buf, Project{Name: name})
+		t.Execute(&buf, Project{Name: name, Module: name})
 		os.WriteFile(name+"/"+f.Out, buf.Bytes(), 0644)
 	}
 
@@ -66,6 +69,15 @@ func createProject(name string) {
 	exec.Command("git", "init", name).Run()
 
 	cmd := exec.Command("go", "mod", "init", name)
+	cmd.Dir = name
+	cmd.Run()
+
+	// Add SQLite dependency
+	cmd = exec.Command("go", "get", "modernc.org/sqlite")
+	cmd.Dir = name
+	cmd.Run()
+
+	cmd = exec.Command("go", "mod", "tidy")
 	cmd.Dir = name
 	cmd.Run()
 

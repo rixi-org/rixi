@@ -13,6 +13,17 @@ import (
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stderr, nil)))
 
+	// Initialize database
+	if err := initDB(); err != nil {
+		slog.Error("failed to initialize database", "error", err)
+		os.Exit(1)
+	}
+	defer closeDB()
+
+	// Initialize cache
+	cache := NewMemoryCache()
+	_ = cache // will be used by controllers
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"

@@ -1,18 +1,114 @@
 package controller
 
 import (
+	"database/sql"
 	"net/http"
-	"time"
+	"strconv"
 
 	"{{.Module}}/model"
 	"{{.Module}}/view"
 )
 
-func {{.Name}}Handler(w http.ResponseWriter, r *http.Request) {
-	data := model.{{.Name}}{
-		ID:        1,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+func {{.Name}}Handler(db *sql.DB) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			// Check if ID is in path: /posts/123
+			id := extractID(r.URL.Path, "/{{.Plural}}/")
+			if id > 0 {
+				get{{.Name}}(w, r, db, id)
+				return
+			}
+			list{{.Name}}s(w, r, db)
+		case http.MethodPost:
+			create{{.Name}}(w, r, db)
+		case http.MethodPut:
+			id := extractID(r.URL.Path, "/{{.Plural}}/")
+			if id == 0 {
+				http.Error(w, "id required", http.StatusBadRequest)
+				return
+			}
+			update{{.Name}}(w, r, db, id)
+		case http.MethodDelete:
+			id := extractID(r.URL.Path, "/{{.Plural}}/")
+			if id == 0 {
+				http.Error(w, "id required", http.StatusBadRequest)
+				return
+			}
+			delete{{.Name}}(w, r, db, id)
+		default:
+			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		}
+	}
+}
+
+func list{{.Name}}s(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	data, err := model.FindAll{{.Name}}s(db)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
 	}
 	view.Render(w, "{{.Name}}", data)
+}
+
+func get{{.Name}}(w http.ResponseWriter, r *http.Request, db *sql.DB, id int64) {
+	record, err := model.Find{{.Name}}(db, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	view.Render(w, "{{.Name}}", []model.{{.Name}}{*record})
+}
+
+func create{{.Name}}(w http.ResponseWriter, r *http.Request, db *sql.DB) {
+	title := r.FormValue("title")
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	record := &model.{{.Name}}{Title: title}
+	if err := model.Create{{.Name}}(db, record); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/{{.Plural}}/", http.StatusSeeOther)
+}
+
+func update{{.Name}}(w http.ResponseWriter, r *http.Request, db *sql.DB, id int64) {
+	title := r.FormValue("title")
+	if title == "" {
+		http.Error(w, "title is required", http.StatusBadRequest)
+		return
+	}
+	record, err := model.Find{{.Name}}(db, id)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusNotFound)
+		return
+	}
+	record.Title = title
+	if err := model.Update{{.Name}}(db, record); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/{{.Plural}}/", http.StatusSeeOther)
+}
+
+func delete{{.Name}}(w http.ResponseWriter, r *http.Request, db *sql.DB, id int64) {
+	if err := model.Delete{{.Name}}(db, id); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	http.Redirect(w, r, "/{{.Plural}}/", http.StatusSeeOther)
+}
+
+// extractID pulls the numeric ID from a path like /posts/123
+func extractID(path, prefix string) int64 {
+	if len(path) <= len(prefix) {
+		return 0
+	}
+	id, err := strconv.ParseInt(path[len(prefix):], 10, 64)
+	if err != nil {
+		return 0
+	}
+	return id
 }

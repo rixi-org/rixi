@@ -1,16 +1,23 @@
 {{"{{"}}define "{{.Name}}"{{"}}"}}
-<h1>{{.Name}}</h1>
+<h1>{{.Name}}s</h1>
 <table>
     <thead>
         <tr>
-            <th>Field</th>
-            <th>Value</th>
+            <th>ID</th>
+            <th>Title</th>
+            <th>Created At</th>
+            <th>Updated At</th>
         </tr>
     </thead>
     <tbody>
-        <tr><td>ID</td><td>{{"{{"}}.ID{{"}}"}}</td></tr>
-        <tr><td>Created At</td><td>{{"{{"}}.CreatedAt{{"}}"}}</td></tr>
-        <tr><td>Updated At</td><td>{{"{{"}}.UpdatedAt{{"}}"}}</td></tr>
+        {{"{{"}}range .{{"}}"}}
+        <tr>
+            <td>{{"{{"}}.ID{{"}}"}}</td>
+            <td>{{"{{"}}.Title{{"}}"}}</td>
+            <td>{{"{{"}}.CreatedAt{{"}}"}}</td>
+            <td>{{"{{"}}.UpdatedAt{{"}}"}}</td>
+        </tr>
+        {{"{{"}}end{{"}}"}}
     </tbody>
 </table>
 {{"{{"}}end{{"}}"}}

@@ -1,0 +1,36 @@
+package main
+
+import (
+	"database/sql"
+	"log/slog"
+
+	_ "modernc.org/sqlite"
+)
+
+var db *sql.DB
+
+func initDB() error {
+	var err error
+	db, err = sql.Open("sqlite", "data.db")
+	if err != nil {
+		return err
+	}
+
+	if err = db.Ping(); err != nil {
+		return err
+	}
+
+	slog.Info("database connected", "driver", "sqlite", "dsn", "data.db")
+	return migrate()
+}
+
+func closeDB() {
+	if db != nil {
+		db.Close()
+	}
+}
+
+// migrate runs all database migrations.
+func migrate() error {
+	return nil
+}

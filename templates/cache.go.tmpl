@@ -1,0 +1,88 @@
+package main
+
+import (
+	"sync"
+	"time"
+)
+
+type cacheItem struct {
+	value     interface{}
+	expiresAt time.Time
+}
+
+// MemoryCache is a simple in-memory cache with TTL support.
+type MemoryCache struct {
+	mu    sync.RWMutex
+	items map[string]cacheItem
+}
+
+func NewMemoryCache() *MemoryCache {
+	c := &MemoryCache{items: make(map[string]cacheItem)}
+	go c.cleanup()
+	return c
+}
+
+func (c *MemoryCache) Get(key string, dest interface{}) bool {
+	c.mu.RLock()
+	item, ok := c.items[key]
+	c.mu.RUnlock()
+
+	if !ok || time.Now().After(item.expiresAt) {
+		return false
+	}
+
+	// Simple assignment for basic types
+	switch d := dest.(type) {
+	case *interface{}:
+		*d = item.value
+	case *string:
+		if v, ok := item.value.(string); ok {
+			*d = v
+		}
+	case *int:
+		if v, ok := item.value.(int); ok {
+			*d = v
+		}
+	case *int64:
+		if v, ok := item.value.(int64); ok {
+			*d = v
+		}
+	}
+	return true
+}
+
+func (c *MemoryCache) Set(key string, value interface{}, ttl time.Duration) {
+	c.mu.Lock()
+	c.items[key] = cacheItem{
+		value:     value,
+		expiresAt: time.Now().Add(ttl),
+	}
+	c.mu.Unlock()
+}
+
+func (c *MemoryCache) Delete(key string) {
+	c.mu.Lock()
+	delete(c.items, key)
+	c.mu.Unlock()
+}
+
+func (c *MemoryCache) Exists(key string) bool {
+	c.mu.RLock()
+	item, ok := c.items[key]
+	c.mu.RUnlock()
+	return ok && time.Now().Before(item.expiresAt)
+}
+
+func (c *MemoryCache) cleanup() {
+	for {
+		time.Sleep(time.Minute)
+		c.mu.Lock()
+		now := time.Now()
+		for key, item := range c.items {
+			if now.After(item.expiresAt) {
+				delete(c.items, key)
+			}
+		}
+		c.mu.Unlock()
+	}
+}
